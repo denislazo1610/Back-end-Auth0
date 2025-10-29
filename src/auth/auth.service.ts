@@ -24,6 +24,7 @@ export class AuthService {
   private clientId = process.env.AUTH0_CLIENT_ID;
   private clientSecret = process.env.AUTH0_CLIENT_SECRET;
   private audience = process.env.AUDIENCE;
+  private accessToken = process.env.ACCESS_TOKEN;
 
   constructor(
     @InjectRepository(User)
@@ -121,6 +122,39 @@ export class AuthService {
       throw new BadRequestException(
         error.response?.data || 'Failed to log in user',
       );
+    }
+  }
+
+  async updatePassword(auth0Id: string, newPassword: string) {
+    try {
+      // Step 1: Get Management API token
+      const tokenResponse = await axios.post(
+        `https://${this.auth0Domain}/oauth/token`,
+        {
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          audience: `https://${this.auth0Domain}/api/v2/`,
+          grant_type: 'client_credentials',
+        },
+        { headers: { 'Content-Type': 'application/json' } },
+      );
+
+      console.log('Management API token response:', tokenResponse.data);
+
+      const managementToken = tokenResponse.data.access_token;
+
+      // Step 2: Update user password in Auth0
+      await axios.patch(
+        `https://${this.auth0Domain}/api/v2/users/${auth0Id}`,
+        { password: newPassword, connection: 'Username-Password-Authentication' },
+        { headers: { Authorization: `Bearer ${managementToken}` } },
+      );
+
+
+      return { message: 'Password updated successfully' };
+    } catch (error) {
+      console.error('Update password error:', error.response?.data || error.message);
+      throw new BadRequestException('Failed to update password');
     }
   }
 

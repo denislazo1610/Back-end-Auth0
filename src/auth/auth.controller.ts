@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, BadRequestException, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Req, BadRequestException, Get, Put } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -25,6 +25,13 @@ export class AuthController {
   @Get('login')
   async login(@Body() body: { email: string; password: string }) {
     return this.authService.loginUser(body.email, body.password);
+  }
+
+  @Put('password-reset')
+  @UseGuards(AuthGuard('jwt'))
+  async resetPassword(@Req() req, @Body() body: { newPassword: string }) {
+    const { sub: auth0Id } = req.user;
+    return this.authService.updatePassword(auth0Id, body.newPassword);
   }
 
   @Post('create-client')
